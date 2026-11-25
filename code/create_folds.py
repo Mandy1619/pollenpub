@@ -52,7 +52,9 @@ print("Number of layers \t", len(df))
 print("Number of stacks \t", len(groups))
 print("Average Number Layers per Stack \t", len(df)/len(groups))
 
-if args.stats_only:
+# Count labelled pollen per layer. Always needed: the per-fold statistics below use
+# df['num_pollen'], which previously only existed with --stats_only (KeyError otherwise).
+if True:
     total_num_pollen = 0
     layers_with_pollen = 0
     layers_pollen = []
@@ -80,10 +82,17 @@ print(f"Average number of stacks per train \t {len(groups)/args.K * (args.K-1)}"
 print(f"Average number of stacks per test \t {len(groups)/args.K}")
 
 if args.merge_set:
-    merge_df = pd.read_csv(args.merge_set, sep="\n", header=None, names=['filename'])
+    with open(args.merge_set) as f:
+        merge_df = pd.DataFrame({'filename': [l.strip() for l in f if l.strip()]})
     print(f'Loaded merge set with {len(merge_df)} items')
 else:
     merge_df = None
+
+def write_list(frame, path):
+    # one relative image path per line (pandas>=1.5 no longer accepts sep='\n')
+    with open(path, 'w') as f:
+        for name in frame['filename']:
+            f.write(f"{name}\n")
 
 folds = []
 for k in range(args.K):
@@ -95,7 +104,7 @@ for k in range(args.K):
     print(f"Fold {k}: Layers with pollen {(fold_df['num_pollen']>0).sum()}")
 
 # create training set
-indices = np.arange(args.K).astype(np.int)
+indices = np.arange(args.K).astype(int)
 for k in range(args.K):
     if args.K == 1:
         base = ''
@@ -108,17 +117,17 @@ for k in range(args.K):
     print(f"Fold{k}: Images in test set \t {len(test_set)}")
 
     if not args.stats_only:
-        test_set.to_csv(test_filename,columns=['filename'],index=False,header=False, sep='\n')
+        write_list(test_set, test_filename)
 
     if args.K > 1:
         train_folds = [folds[i] for i in indices[indices!=k]]
         train_set = pd.concat(train_folds)
         if merge_df is not None:
-            train_set = train_set.append(merge_df)
+            train_set = pd.concat([train_set, merge_df])
     
         print(f"Fold{k}: Images in train set \t {len(train_set)}")
         if not args.stats_only:
-            train_set.to_csv(train_filename,columns=['filename'],index=False,header=False, sep='\n')
+            write_list(train_set, train_filename)
 
     if not args.stats_only:
         with open(f"config/{args.name}{base[:-1]}.data",'w') as f:

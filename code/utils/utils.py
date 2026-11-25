@@ -325,6 +325,9 @@ def build_targets(pred_boxes, pred_cls, target, anchors, ignore_thres):
         gx, gy = gxy.t()
         gw, gh = gwh.t()
         gi, gj = gxy.long().t()
+        # boxes centred exactly on the right/bottom border would index out of the grid
+        gi = gi.clamp(0, nG - 1)
+        gj = gj.clamp(0, nG - 1)
         # Set masks
         obj_mask[b, best_n, gj, gi] = 1
         noobj_mask[b, best_n, gj, gi] = 0

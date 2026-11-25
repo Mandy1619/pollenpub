@@ -15,27 +15,39 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Changes to original version: Adopted to work with multi-layer pollen data
 '''
-import tensorboard_logger as tb_logger
+import csv
+import os
+
+# The original code used the unmaintained `tensorboard_logger` package. We use
+# PyTorch's built-in SummaryWriter when tensorboard is installed and always also
+# append to a CSV file (<log_dir>/metrics.csv) that can be read without tooling.
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except Exception:  # tensorboard not installed
+    SummaryWriter = None
 
 
 class Logger(object):
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
-        # self.writer = tf.summary.FileWriter(log_dir)
-        self.logger = tb_logger.Logger(logdir=log_dir, flush_secs=2)
-
+        os.makedirs(log_dir, exist_ok=True)
+        self.writer = SummaryWriter(log_dir) if SummaryWriter is not None else None
+        self.csv_path = os.path.join(log_dir, "metrics.csv")
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
-        # summary = tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=value)])
-        # self.writer.add_summary(summary, step)
-        self.logger.log_value(tag, value, step)
+        self.list_of_scalars_summary([(tag, value)], step)
 
     def list_of_scalars_summary(self, tag_value_pairs, step):
         """Log scalar variables."""
-        # summary = tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=value) for tag, value in tag_value_pairs])
-        # self.writer.add_summary(summary, step)
-        for tag, value in tag_value_pairs:
-            self.logger.log_value(tag, value, step)
-        
-
+        new_file = not os.path.exists(self.csv_path)
+        with open(self.csv_path, "a", newline="") as f:
+            w = csv.writer(f)
+            if new_file:
+                w.writerow(["step", "tag", "value"])
+            for tag, value in tag_value_pairs:
+                w.writerow([step, tag, float(value)])
+        if self.writer is not None:
+            for tag, value in tag_value_pairs:
+                self.writer.add_scalar(tag, float(value), step)
+            self.writer.flush()

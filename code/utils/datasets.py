@@ -65,7 +65,7 @@ class ImageFolder(Dataset):
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
         # Extract image as PyTorch tensor
-        img = transforms.ToTensor()(Image.open(img_path))
+        img = transforms.ToTensor()(Image.open(img_path).convert("RGB"))
         # Pad to square resolution
         img, _ = pad_to_square(img, 0)
         # Resize
@@ -128,7 +128,6 @@ class ListDataset(Dataset):
 
         label_path = self.label_files[index % len(self.img_files)].rstrip()
 
-        cv2.imwrite(f'../output/tmp/{index}_img.png',img.permute(1,2,0).cpu().numpy()*255) 
 
         targets = None
         if os.path.exists(label_path):
@@ -138,11 +137,13 @@ class ListDataset(Dataset):
             y1 = h_factor * (boxes[:, 2] - boxes[:, 4] / 2)
             x2 = w_factor * (boxes[:, 1] + boxes[:, 3] / 2)
             y2 = h_factor * (boxes[:, 2] + boxes[:, 4] / 2)
-            # Adjust for added padding
+            # Adjust for added padding. pad = (left, right, top, bottom); both
+            # corners shift by the left/top padding (original code added the
+            # right/bottom padding to x2/y2, off by one pixel for odd padding).
             x1 += pad[0]
             y1 += pad[2]
-            x2 += pad[1]
-            y2 += pad[3]
+            x2 += pad[0]
+            y2 += pad[2]
 
 
             if self.blur_thres is not None:

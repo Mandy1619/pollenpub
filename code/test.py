@@ -392,7 +392,7 @@ def save_images_to_disk(path,img,detections,ground_truth,img_size,output_folder,
                 box_w = x2 - x1
                 box_h = y2 - y1
 
-                color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
+                color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0][0])]
                 color = 'green'
                 # Create a Rectangle patch
                 bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=1, edgecolor=color, facecolor="none", clip_on=clip_labels,clip_box=ax.clipbox)

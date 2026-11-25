@@ -120,7 +120,7 @@ if __name__ == "__main__":
         print("(%d) Image: '%s'" % (img_i, path))
 
         # Create plot
-        img = np.array(Image.open(path))
+        img = np.array(Image.open(path).convert("RGB"))
         plt.figure()
         fig, ax = plt.subplots(1)
         ax.imshow(img)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
                 box_w = x2 - x1
                 box_h = y2 - y1
 
-                color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
+                color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0][0])]
                 # Create a Rectangle patch
                 bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=2, edgecolor=color, facecolor="none")
                 # Add the bbox to the plot

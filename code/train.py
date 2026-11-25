@@ -43,6 +43,13 @@ from torchvision import transforms
 from torch.autograd import Variable
 import torch.optim as optim
 
+def str2bool(v):
+    # argparse's `default=True` without a type turns "--flag False" into the truthy string "False"
+    if isinstance(v, bool):
+        return v
+    return str(v).lower() in ("1", "true", "yes", "y")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=100, help="number of epochs")
@@ -56,8 +63,10 @@ if __name__ == "__main__":
     parser.add_argument("--name", type=str, default="pollen", help="name of the checkpoint")
     parser.add_argument("--checkpoint_interval", type=int, default=1, help="interval between saving model weights")
     parser.add_argument("--evaluation_interval", type=int, default=1, help="interval evaluations on validation set")
-    parser.add_argument("--compute_map", default=False, help="if True computes mAP every tenth batch")
-    parser.add_argument("--multiscale_training", default=True, help="allow for multi-scale training")
+    parser.add_argument("--compute_map", type=str2bool, default=False, help="if True computes mAP every tenth batch")
+    parser.add_argument("--multiscale_training", type=str2bool, default=True, help="allow for multi-scale training")
+    parser.add_argument("--keep_all_checkpoints", action="store_true", help="save a checkpoint every epoch (246MB each) instead of only last + best")
+    parser.add_argument("--max_batches", type=int, default=None, help="stop each epoch after this many batches (quick smoke tests on CPU)")
     parser.add_argument("--blur_thres", type=float, default=None, help="laplacian variance threshold blurry image removal. If None, nothing will be removed")
     opt = parser.parse_args()
     print(opt)
@@ -98,7 +107,7 @@ if __name__ == "__main__":
         batch_size=opt.batch_size,
         shuffle=True,
         num_workers=opt.n_cpu,
-        pin_memory=True,
+        pin_memory=torch.cuda.is_available(),
         collate_fn=dataset.collate_fn,
     )
 
@@ -121,10 +130,14 @@ if __name__ == "__main__":
         "conf_noobj",
     ]
 
+    best_map = -1.0
     for epoch in range(opt.epochs):
         model.train()
         start_time = time.time()
-        for batch_i, (_, imgs, targets) in tqdm(enumerate(dataloader)):
+        epoch_loss, epoch_batches = 0.0, 0
+        for batch_i, (_, imgs, targets) in tqdm(enumerate(dataloader), total=len(dataloader)):
+            if opt.max_batches is not None and batch_i >= opt.max_batches:
+                break
             batches_done = len(dataloader) * epoch + batch_i
 
             imgs = Variable(imgs.to(device))
@@ -133,8 +146,10 @@ if __name__ == "__main__":
             # print(imgs,targets)
             loss, outputs = model(imgs, targets)
             loss.backward()
+            epoch_loss += loss.item()
+            epoch_batches += 1
 
-            if batches_done % opt.gradient_accumulations:
+            if (batches_done + 1) % opt.gradient_accumulations == 0:
                 # Accumulates gradient before each step
                 optimizer.step()
                 optimizer.zero_grad()
@@ -175,6 +190,10 @@ if __name__ == "__main__":
             # print(log_str)
             model.seen += imgs.size(0)
 
+        mean_loss = epoch_loss / max(epoch_batches, 1)
+        print(f"Epoch {epoch}: mean train loss {mean_loss:.4f} over {epoch_batches} batches")
+        logger.list_of_scalars_summary([("train_loss", mean_loss)], epoch)
+
         if epoch % opt.evaluation_interval == 0:
             print("\n---- Evaluating Model ----")
             # Evaluate the model on the validation set
@@ -205,4 +224,13 @@ if __name__ == "__main__":
             print(f"---- mAP {AP.mean()}")
 
         if epoch % opt.checkpoint_interval == 0:
-            torch.save(model.state_dict(), f"checkpoints/%s_%d.pth" % (opt.name,epoch))
+            # Each checkpoint is ~246MB; by default keep only the latest and the best (by val mAP).
+            if opt.keep_all_checkpoints:
+                torch.save(model.state_dict(), f"checkpoints/%s_%d.pth" % (opt.name, epoch))
+            torch.save(model.state_dict(), f"checkpoints/{opt.name}_last.pth")
+            if epoch % opt.evaluation_interval == 0:
+                current_map = float(AP.mean()) if len(AP) else 0.0
+                if current_map > best_map:
+                    best_map = current_map
+                    torch.save(model.state_dict(), f"checkpoints/{opt.name}_best.pth")
+                    print(f"New best mAP {best_map:.4f}, saved checkpoints/{opt.name}_best.pth")

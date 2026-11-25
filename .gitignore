@@ -144,3 +144,7 @@ __pycache__
 checkpoints
 .vscode/
 
+
+.venv/
+.uvcache/
+logs/

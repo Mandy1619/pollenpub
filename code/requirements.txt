@@ -1,0 +1,15 @@
+# Modern (2026) pip requirements, tested with Python 3.12/3.14 + torch 2.15 (CPU).
+# environment.yml is the authors' original conda env (Python 3.7, CUDA 10.1) kept for reference.
+#
+# CPU-only torch (avoids multi-GB CUDA wheels):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+torchvision>=0.17
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+opencv-python-headless>=4.8
+pillow>=10
+tqdm
+terminaltables
+tensorboard        # optional: train.py also logs to logs/<name>/metrics.csv

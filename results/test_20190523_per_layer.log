@@ -1,0 +1,25 @@
+agg
+Namespace(batch_size=8, data_config='config/test_20190523.data', model_def='config/yolov3-pollen.cfg', weights_path='../weights/pollen_20190526.pth', class_path='config/pollen/classes.names ', iou_thres=0.5, conf_thres=0.5, nms_thres=0.5, n_cpu=8, img_size=416, merge=False, intheloop=False, save_images=False, blur_thres=None)
+Compute mAP...
+                                       filename  index
+0  ../data/pollen_20190523/layers/000104-00.jpg      0
+1  ../data/pollen_20190523/layers/000104-01.jpg      1
+2  ../data/pollen_20190523/layers/000104-02.jpg      2
+3  ../data/pollen_20190523/layers/000104-03.jpg      3
+4  ../data/pollen_20190523/layers/000104-04.jpg      4
+
+
+  boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5)).clone()
+
+  boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5)).clone()
+
+  boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5)).clone()
+
+Number of targets removed tensor(322)
+True positives 2194.0
+
+Average Precisions:
++ Class '0' (pollen) - AP: 0.8991997839678553
++ Class '1' (maybe) - AP: 0.0
+mAP: 0.44959989198392764
+F1 [0.87462627 0.        ]
