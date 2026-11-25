@@ -6,6 +6,10 @@ This repository contains the code and hardware design files accompanying the pap
 
 This repository was created as part of my seminar in **Advanced Networked Embedded Systems**, where I studied the paper above and reproduced its pollen detection results. The method, hardware design, dataset and trained model are the work of the original authors (Cao, Meyer, Thiele, Saukh); the original repository is [osaukh/pollenpub](https://github.com/osaukh/pollenpub).
 
+📖 **[Read the full documentation](docs/README.md)**: how the system works end to end, from the pollen trap and the microscope images to the YOLOv3 model, training, evaluation and step-by-step reproduction.
+
+![Human labels compared with model predictions](docs/img/labels_vs_predictions.jpg)
+
 **My contributions**
 - Ported the code from Python 3.7 / PyTorch 1.x to current Python (3.12, 3.14) and PyTorch 2.x, fixing the incompatibilities this exposed (tensor indexing, image mode handling, NaN loss on batches without labels).
 - Rewrote the dataset downloader to resume dropped connections and fetch only part of the archive (`--only pollen_20190523` fetches the 626MB test set without the full 1.6GB zip).
